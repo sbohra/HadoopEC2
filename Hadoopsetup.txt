@@ -1,0 +1,108 @@
+*********Hadoop Installation*************
+
+Java Installation:
+Install JAVA on Secondary NameNode and two slaveNaodes and check JAVA version to see weather its installed properly.
+$ sudo apt-get update  
+$ sudo apt-get install oracle-jdk7-installer
+$ java -version
+
+Hadoop Installation:
+Install Hadoop on SNN and other slave nodes using wget command or here you can use WinSCp to transfer the Hadoop .tar file and extract them
+$ mv hadoop-2.5.0.tar.gz /usr/local/hadoop
+$ tar -xvfz hadoop-2.5.0.tar.gz
+
+Set Environmental Variables:
+edit .bashrc file to add the path of Java and Hadoop important directories
+$ vi .bashrc
+$ export JAVA_HOME = usr/lib/jvm/java-7-openjdk-amd64
+$ export PATH= $PATH:$JAVA_HOME/bin
+$ export HADOOP_HOME= usr/local/hadoop
+$ export PATH= $PATH:$HADOOP_HOME/bin
+$ export HADOOP_CONF_DIR= $HADOOP_HOME/etc/conf
+$ source ~/.bashrc
+
+PasswordLess SSh setup on Servers:
+The public part of the key loaded into the agent must be put on the target system in ~/.ssh/authorized_keys. 
+This has been taken care of by the AWS Server creation process. Now we need to add the AWS EC2 Key Pair identity hadoopec2cluster.pem to SSH profile. 
+In order to do that we will need to use following ssh utilities. ‘ssh-agent’ is a background program that handles passwords for SSH private keys.
+‘ssh-add’ command prompts the user for a private key password and adds it to the list maintained by ssh-agent. 
+Once you add a password to ssh-agent, you will not be asked to provide the key when using SSH or SCP to connect to hosts with your public key.
+Amazon EC2 Instance  has already taken care of ‘authorized_keys’ on master server, execute following commands to allow password-less SSH access to slave servers.
+
+$ chmod 644 authorized_keys
+$ chmos 400 hadoopec2cluster.pem
+$ eval `ssh-agent -s` (use back quote `)
+$ ssh-add hadoopec2cluster.pem
+
+Keep in mind ssh session will be lost upon shell exit and you have repeat ssh-agent and ssh-add commands.
+Now you can test ssh to connect from master to slave
+ $ ssh ubuntu@hostname.com
+ 
+Hadoop cluster configuration:
+----Under hadoop_env.sh file add Java path and save changes.
+  $ vi $HADOOP_CONF_DIR/hadoop_env.sh
+   export JAVA_HOME = /usr/lib/jvm/java-7-openjdk-amd64
+----Under core-site.xml add following properties and save changes
+  $ vi $HADOOP_CONF_DIR/core-site.xml
+     <property>
+         <name>fs.default.name</name>
+         <value>hdfs://namenode_hostname:9000</value>
+     </property>
+
+     
+------Under Yarn-site.xml add following properties and save changes
+     <property>
+	      <name>yarn.nodemanager.aux-services</name>
+          <value>mapreduce_shuffle</value>
+     </property>
+     <property>
+          <name>yarn.resourcemanager.hostname</name>
+          <value>namenode_hostname</value>
+     </property>
+------Under Mapred-site.xml add following and save changes   
+     <property>
+          <name>mapreduce.jobtracker.address</name>
+          <value>namenode_hostname:54311</value>
+     </property>
+     <property>
+          <name>mapreduce.framework.name</name>
+          <value>yarn</value>
+     </property>
+------Under hdfs-site.xml add following properties and save changes
+     <property>
+          <name>dfs.replication</name>
+          <value>3</value>
+     </property>
+     <property>
+          <name>dfs.namenode.name.dir</name>
+          <value>file:///usr/local/hadoop/data/hdfs/namenode</value>
+     </property>
+$ sudo mkdir -p $HADOOP_HOME/data/hdfs/namenode
+
+Now on each DataNode, edit HADOOP_CONF_DIR/hdfs-site.xml:
+-----Under hdfs-site.xml in datanode machines and save changes 
+     <property>
+          <name>dfs.replication</name>
+          <value>3</value>
+     </property>
+     <property>
+          <name>dfs.datanode.data.dir</name>
+          <value>file:///usr/local/hadoop/data/hdfs/datanode</value>
+     </property>
+$ sudo mkdir -p $HADOOP_HOME/data/hdfs/datanode
+
+Next, you’ll create the masters file in HADOOP_CONF_DIR. The masters file sets which machine the secondary namenode runs on. 
+In your case, you'll have the secondary NameNode run on the same machine as the NameNode, so edit masters, add the hostname of NameNode (Note: Not the public hostname, but the hostname you get from $ hostname). Typically though, you would have the secondary NameNode run on a different machine than the primary NameNode.
+Next, edit the slaves file in HADOOP_CONF_DIR, this file sets the machines that are DataNodes. In slaves, add the hostnames of each datanode (Note: Again, not the public hostname, but $ hostname hostnames). The slaves file might already contain a line localhost, you should remove it, otherwise the NameNode would run as a DataNode too. It should look like this:
+slavenode1_hostname
+slavenode2_hostname
+
+Hadoop Daemon startup:
+
+$ hadoop namenode -format
+$ cd $HADOOP_HOME/sbin/
+$ start-all.sh
+$ start-yarn.sh
+$ mr-jobhistory-daemon.sh start historyserver
+$ jsp
+	
