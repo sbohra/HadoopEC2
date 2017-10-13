@@ -1,0 +1,53 @@
+
+********Setup for multi-node Hadoop cluster on Amazon EC2************
+
+Total of four nodes 
+---->NameNode
+---->SlaveNode1
+---->SlaveNode2
+---->Secondary NameNode
+Firstly need to create the Amazon Free-trail account 
+
+Setting the Amazon Aws Instances:
+---->Once you have signed up for Amazon account. Login to Amazon Web Services, click on My Account and navigate to Amazon EC2 Console.
+---->Click on "Launch instance" Button.
+---->Choose Ubuntu Server 64-bit OS.
+---->Select the micro instance(Amazon EC2 provides different instance types, these have varying combinations of CPUS, Memory, Storage and Network Capacity).
+---->Configure the number of instances, which in this case is four.
+---->Add minimum storage to 8 GB.
+---->Create a new security group, later on we are going to modify the security group with security rules.
+     The default is “SSH” and 0.0.0.0/0. This means that any computer can connect to your instance over ssh. 
+     In practice, you would assign a restricted list of IP addresses that can access your cluster. 
+---->Launch instances and create Security pair. Amazon EC2 uses public–key cryptography to encrypt and decrypt login information. 
+     Public–key cryptography uses a public key to encrypt a piece of data, such as a password, then the recipient uses the private key to decrypt the data. 
+	 The public and private keys are known as a key pair.
+---->Create a new key pair and give it a name “hadoopec2cluster” and download the key pair (.pem) file to your local machine. Click Launch Instance
+Now after launching the instances we can Rename them with NameNode, SecondaryNode, SlaveNode1 and SlaveNode2.(Note: we can note the IP addresses so that we can use
+them with Putty later to connect Instances.
+In order to have TCP and ICMP access we need to add 2 additional security rules. Add TCP,ICMP and SSH(22) under the inbound rules to “HadoopEC2SecurityGroup.
+
+Putty for Connecting four Instances :  
+Here we will use putty(Windows) to connects with Namenode instance and we will set-up passwordless ssh, so that Master node can communicate with the slave nodes.
+we will also make use of PuttyGen Client and downloaded hadoopec2cluster.pem file to generate the private key (.ppk). 
+Using PuttyGen import key pair, which created during lunching the instances and save the private key with meaningful name.
+Now connect to Namenode with Putty, import the .ppk private key for user name Ubuntu and also five the Hostname and port 22. similarly, connect to slave1 and slave2.
+
+Enable Public Access:
+Issue ifconfig command and note down the ip address. Next, we are going to update the hostname with ec2 public URL.
+finally we are going to update /etc/hosts file to map  the ec2 public URL with ip address.
+This will help us to configure master ans slaves nodes with hostname instead of ip address.
+Now, issue the hostname command, it will display the ip address same as inet address from ifconfig command.
+
+Modify etc/hosts file:
+Open the /etc/hosts in vi editor, in a very first line it will show 127.0.0.1 localhost, 
+we need to replace that with amazon ec2 hostname and ip address we just collected and save it.
+similarly add the other three instances IP address and hostnames in the next line.
+
+WinSCP for transferring files from windows to Namenode:
+Now use winSCP for transferring the files securely from windows to Namenode instance on AWS server, for this all you need to do is enter Hostname of Namenode
+instance, username as ubuntu and under Advance options insert the private key which save earlier. Namenode will use this .ppk file to connect to slaves.
+
+
+
+
+
